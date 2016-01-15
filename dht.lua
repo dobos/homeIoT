@@ -6,14 +6,14 @@ function getdhtresponse(filename, params, headers)
 	return buf
 end
 
-h:addhandler("GET", "/dht", "text/html", function(params, headers)
+h:addhandler("GET", "/dht", 1, "text/html", function(params, headers)
 	return getdhtresponse("dht.html", params, headers)
 end)
 
-h:addhandler("GET", "/dht", "text/json", function(params, headers)
+h:addhandler("GET", "/dht", 2, "text/json", function(params, headers)
 	return getdhtresponse("dht.json", params, headers)
 end)
 
-h:addhandler("GET", "/dht", "text/plain", function(params, headers)
+h:addhandler("GET", "/dht", 3, "text/plain", function(params, headers)
 	return getdhtresponse("dht.txt", params, headers)
 end)

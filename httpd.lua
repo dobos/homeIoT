@@ -9,17 +9,18 @@ function httpd.create()
 	return h
 end
 
-function httpd:addhandler(method, path, mime, handler)
+function httpd:addhandler(method, path, idx, mime, handler)
 	if (h.handlers[path] == nil) then
 		h.handlers[path] = {}
 	end
 	if (h.handlers[path][method] == nil) then
 		h.handlers[path][method] = {}
 	end
-	if (h.handlers[path][method][mime] == nil) then
-		h.handlers[path][method][mime] = {}
+	if (h.handlers[path][method][idx] == nil) then
+		h.handlers[path][method][idx] = {}
 	end
-	self.handlers[path][method][mime] = handler
+	self.handlers[path][method][idx].mime = mime
+	self.handlers[path][method][idx].handler = handler
 end
 
 function httpd:open()
@@ -92,12 +93,12 @@ function httpd:buildresponse(method, path, params, headers)
 	elseif (self.handlers[path][method] == nil) then
 		return self:respond405()
 	else
-		for mime, handler in pairs(self.handlers[path][method]) do
-			if (self:isaccepted(headers, mime)) then
-				if (pcall(function() data = handler(params, headers) end)) then
+		for idx, handler in ipairs(self.handlers[path][method]) do
+			if (self:isaccepted(headers, handler.mime)) then
+				if (pcall(function() data = handler.handler(params, headers) end)) then
 					buf = buf .. "HTTP/1.1 200 OK\n"
 					buf = buf .. self.version
-					buf = buf .. "Content-Type: " .. mime .. "\n"
+					buf = buf .. "Content-Type: " .. handler.mime .. "\n"
 					buf = buf .. "\n"
 					buf = buf .. (data)
 					buf = buf .. "\n\n"
