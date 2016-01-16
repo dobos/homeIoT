@@ -94,7 +94,11 @@ function httpd.buildresponse(method, path, params, headers)
 	else
 		for idx, handler in ipairs(httpd.handlers[path][method]) do
 			if (httpd.isaccepted(headers, handler.mime)) then
-				if (pcall(function() data = handler.handler(params, headers) end)) then
+				local status, err = pcall(function() data = handler.handler(params, headers) end)
+				--data = handler.handler(params, headers)
+				--local status = true
+				--local err = ""
+				if (status) then
 					buf = buf .. "HTTP/1.1 200 OK\n"
 					buf = buf .. httpd.version
 					buf = buf .. "Content-Type: " .. handler.mime .. "\n"
@@ -103,7 +107,7 @@ function httpd.buildresponse(method, path, params, headers)
 					buf = buf .. "\n\n"
 					return buf
 				else
-					return httpd.respond500()
+					return httpd.respond500(err)
 				end
 			end
 		end
@@ -123,8 +127,10 @@ function httpd.respond406()
 	return "HTTP/1.1 406 Not Acceptable\n" .. httpd.version .. "\n\n"
 end
 
-function httpd.respond500()
-	return "HTTP/1.1 500 Error\n" .. httpd.version .. "\n\n"
+function httpd.respond500(err)
+	local buf = "HTTP/1.1 500 Error\n" .. httpd.version .. "\n\n"
+	buf = buf .. err
+	return buf
 end
 
 function httpd.isaccepted(headers, mime)
