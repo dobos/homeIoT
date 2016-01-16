@@ -1,12 +1,13 @@
-wifi.setmode(wifi.STATION)
-wifi.sta.config("***","***")
-wifi.sta.connect()
+dofile("wifid.lua")
+wifid.SSID = "***"
+wifid.password = "***"
+wifid.connect()
 
-wifi.sta.setip({ip="192.168.0.81",netmask="255.255.255.0",gateway="192.168.0.1"})
 
-require "httpd"
-h = httpd.create()
+dofile("httpd.lua")
+httpd.create()
 
-dofile("dht.lua")
+dofile("dhtd.lua")
+dhtd.create(2, 5000)
 
-h:open()
+httpd.open()
