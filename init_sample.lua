@@ -10,4 +10,7 @@ httpd.create()
 dofile("dhtd.lua")
 dhtd.create(2, 5000)
 
+dofile("relayd.lua")
+relayd.create({ 5 })
+
 httpd.open()
