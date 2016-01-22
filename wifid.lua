@@ -5,7 +5,8 @@ wifid.ip = "192.168.0.81"
 wifid.netmask = "255.255.255.0"
 wifid.gateway = "192.168.0.1"
 wifid.server = "192.168.0.2"
-wifid.gpio = 3
+wifid.gpio = 8
+wifid.tmr = 3
 wifid.interval = 100
 wifid.counter = 0
 
@@ -22,7 +23,7 @@ function wifid.connect()
 	
 	print("IP:", wifi.sta.getip())
 		
-	tmr.alarm(wifid.gpio, wifid.interval, 1, wifid.check)
+	tmr.alarm(wifid.tmr, wifid.interval, 1, wifid.check)
 end
 
 function wifid.check()

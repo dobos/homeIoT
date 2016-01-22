@@ -1,0 +1,19 @@
+GPIO map
+========
+
+
+LUA  ESP  comments
+
+0    16
+1    05
+2    04
+3    00   FLASH
+4    02   TX
+5    14
+6    12
+7    13   RX
+8    15
+9    RX   RX0
+10   TX   TX0
+11   ??
+12   ??
