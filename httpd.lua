@@ -35,7 +35,7 @@ function httpd.connect(conn)
 end
 
 function httpd.receive(client, request)
-	gpio.write(wifid.gpio, 0)
+	wifid.flashled(0)
 
 	local buf = httpd.buildresponse(httpd.parse(request))
 	client:send(buf)

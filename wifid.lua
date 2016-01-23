@@ -30,19 +30,23 @@ function wifid.check()
 	local led = 0
 	local sta = wifi.sta.status()
 	
-	if (sta == 0) then
+	if (sta == wifi.STA_IDLE) then
 		led = 0
-	elseif (sta == 1) then
+	elseif (sta == wifi.STA_CONNECTING) then
 		led = (wifid.counter / 5) % 2
-	elseif (sta == 2 or
-	        sta == 3 or
-			sta == 4) then
+	elseif (sta == wifi.STA_WRONGPWD or
+	        sta == wifi.STA_APNOTFOUND or
+			sta == wifi.STA_FAIL) then
 		led = wifid.counter % 2
-	elseif (sta == 5) then
+	elseif (sta == wifi.STA_GOTIP) then
 		led = 1
 	end
 	
 	gpio.write(wifid.gpio, led)
 	
 	wifid.counter = wifid.counter + 1
+end
+
+function wifid.flashled(led)
+	gpio.write(wifid.gpio, led)
 end
