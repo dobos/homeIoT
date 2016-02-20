@@ -17,3 +17,9 @@ LUA  ESP  comments
 10   TX   TX0
 11   ??
 12   ??
+
+
+
+
+sethostname csak dev buildben létezik
+wifi.sta.config-nál auto = 0 kell, különben megjegyzi az utolsót és önállóvá válik

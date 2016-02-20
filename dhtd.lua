@@ -14,7 +14,7 @@ function dhtd.on_event()
 	_, dhtd.temperature, dhtd.humidity = dht.read(dhtd.gpio)
 	
 	if (dispd ~= nil) then
-		dispd.temperature = string.format("%.1f°", dhtd.temperature)
-		dispd.humidity = string.format("%d%%", dhtd.humidity)
+		dispd.setTemperature(dhtd.temperature)
+		dispd.setHumidity(dhtd.humidity)
 	end
 end

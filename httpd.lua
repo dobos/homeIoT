@@ -1,162 +1,221 @@
-httpd = {}
-httpd.__index = httpd
+local Httpd = {}
+Httpd.__index = Httpd
+Httpd.STATUS_IDLE = 0
+Httpd.STATUS_CONTINUE = 1
+Httpd.STATUS_END = 2
 
-function httpd.create()
-	httpd.version = "Server: httpd - nodeMCU on ESP8266\n"
-	httpd.handlers = {}
+function Httpd.new(w)
+	local self = setmetatable({}, Httpd)
+	self.wifid = w
+	self.srv = nil
+	self.handlers = {}
+	return self
 end
 
-function httpd.addhandler(method, path, idx, mime, handler)
-	if (httpd.handlers[path] == nil) then
-		httpd.handlers[path] = {}
+function Httpd:open(port)
+	self.status = Httpd.STATUS_IDLE
+	self.method = ""
+	self.url = ""
+	self.params = {}
+	self.headers = {}
+	self.srv = net.createServer(net.TCP)
+	self.srv:listen(port,
+		function(socket)
+			socket:on("receive",
+				--wifid.flashLed(0)
+				function(conn, request)
+					self:processRequest(conn, request)
+				end )
+			socket:on("sent",
+				function(conn)
+					self:continueResponse(conn)
+				end )
+		end )
+	print(self.version())
+end
+
+function Httpd:version()
+	return "Server: httpd - nodeMCU on ESP8266\n"
+end
+
+function Httpd:addHandler(handler)
+	if (self.handlers[handler.url] == nil) then
+		self.handlers[handler.url] = {}
 	end
-	if (httpd.handlers[path][method] == nil) then
-		httpd.handlers[path][method] = {}
+	if (self.handlers[handler.url][handler.method] == nil) then
+		self.handlers[handler.url][handler.method] = {}
 	end
-	if (httpd.handlers[path][method][idx] == nil) then
-		httpd.handlers[path][method][idx] = {}
-	end
-	httpd.handlers[path][method][idx].mime = mime
-	httpd.handlers[path][method][idx].handler = handler
+	self.handlers[handler.url][handler.method][handler.idx] = handler
 end
 
-function httpd.open()
-	local srv=net.createServer(net.TCP)
-	srv:listen(80, function(conn)
-		httpd.connect(conn)
-	end )
-	print(httpd.version)
-end
-
-function httpd.connect(conn)
-	conn:on("receive", function(client, request)
-		httpd.receive(client, request)
-	end )
-end
-
-function httpd.receive(client, request)
-	wifid.flashled(0)
-
-	local buf = httpd.buildresponse(httpd.parse(request))
-	client:send(buf)
-	client:close()
-	collectgarbage()
-end
-
-function httpd.parse(request)	
-	local method, path, params
-	local headers = {}
-	local i = 0
-	local inheader = true
-	for line in string.gmatch(request, "(.-)\n") do
-		if (i == 0) then
-			method, path, params = httpd.parserequest(line)
-		elseif (inheader) then
-			for k, v in httpd.parseheader(line) do
-				headers[k] = v
-			end
-		else
-			-- process request data
-		end
-		if (line == "") then
-			inheader = false
-		end
-		i = i + 1
-	end
-	return method, path, params, headers
-end
-
-function httpd.parserequest(line)
-	local params = {}
-	local _, _, method, path, vars = string.find(line, "([A-Z]+) (.+)?(.+) HTTP")
-	if (method == nil) then
-		_, _, method, path = string.find(line, "([A-Z]+) (.+) HTTP");
-	end
-	if (vars ~= nil) then
-		for k, v in string.gmatch(vars, "(%w+)=(%w+)&*") do
-			params[k] = v
-		end
-	end
-	return method, path, params
-end
-
-function httpd.parseheader(line)
-	return string.gmatch(line, "([^:]+):(.+)")
-end
-
-function httpd.buildresponse(method, path, params, headers)
-	local data
-	local buf = ""
-	if (httpd.handlers[path] == nil) then
-		return httpd.respond404()
-	elseif (httpd.handlers[path][method] == nil) then
-		return httpd.respond405()
-	else
-		for idx, handler in ipairs(httpd.handlers[path][method]) do
-			if (httpd.isaccepted(headers, handler.mime)) then
-				local status, err = pcall(function() data = handler.handler(params, headers) end)
-				--data = handler.handler(params, headers)
-				--local status = true
-				--local err = ""
-				if (status) then
-					buf = buf .. "HTTP/1.1 200 OK\n"
-					buf = buf .. httpd.version
-					buf = buf .. "Content-Type: " .. handler.mime .. "\n"
-					buf = buf .. "\n"
-					buf = buf .. (data)
-					buf = buf .. "\n\n"
-					return buf
+function Httpd:getHandler()
+	for k, hi in pairs(self.handlers) do
+		if (string.sub(self.url, 1, string.len(k)) == k) then
+			if (hi[self.method] == nil) then
+				return 405, nil
+			else
+				local handler = nil
+				for i, h in pairs(hi[self.method]) do
+					if (self:isAccepted(h)) then
+						handler = h
+					end
+				end
+				if (handler == nil) then
+					return 406, nil
 				else
-					return httpd.respond500(err)
+					return 200, handler
 				end
 			end
 		end
-		return httpd.respond406()
 	end
+
+	return 404, nil
 end
 
-function httpd.respond404()
-	return "HTTP/1.1 404 Not found\n" .. httpd.version .. "\n\n"
-end
-
-function httpd.respond405()
-	return "HTTP/1.1 405 Method not allowed\n" .. httpd.version .. "\n\n"
-end
-
-function httpd.respond406()
-	return "HTTP/1.1 406 Not Acceptable\n" .. httpd.version .. "\n\n"
-end
-
-function httpd.respond500(err)
-	local buf = "HTTP/1.1 500 Error\n" .. httpd.version .. "\n\n"
-	buf = buf .. err
-	return buf
-end
-
-function httpd.isaccepted(headers, mime)
-	local a,b = string.match(mime, "(%w+)/(%w+)")
-	if (headers.Accept == nil) then
+function Httpd:isAccepted(handler)
+	local a,b = string.match(handler.mime, "(%w+)/(%w+)")
+	if (self.headers.Accept == nil) then
 		return true
-	elseif (string.find(headers.Accept, mime) ~= nil) then
+	elseif (string.find(self.headers.Accept, handler.mime) ~= nil) then
 		return true
-	elseif (string.find(headers.Accept, a.."/%*")) then
+	elseif (string.find(self.headers.Accept, a.."/%*")) then
 		return true
-	elseif (string.find(headers.Accept, "%*/"..b)) then
+	elseif (string.find(self.headers.Accept, "%*/"..b)) then
 		return true
-	elseif (string.find(headers.Accept, "%*/%*")) then
+	elseif (string.find(self.headers.Accept, "%*/%*")) then
 		return true
 	else
 		return false
 	end
 end
 
-function httpd.loadfile(filename)
-	local buf
-	
-	if (file.open(filename)) then
-		buf = file.read()
-		file.close()
+function Httpd:processRequest(conn, request)
+	print("processRequest", self.status)
+
+	if (self.status == Httpd.STATUS_IDLE) then
+		self:parseRequest(request)
+	elseif (self.status == Httpd.STATUS_CONTINUE) then
+		-- process request data
 	end
-	
+		
+	local more, buf = self:createResponse()
+	if (more) then
+		self.status = Httpd.STATUS_CONTINUE
+	else
+		self.status = Httpd.STATUS_END
+	end
+	conn:send(buf)
+end
+
+function Httpd:createResponse()
+	print("createResponse", self.status)
+
+	local res
+	res, self.handler = self:getHandler()
+	if (res == 404) then
+		return false, self:respond404()
+	elseif (res == 405) then
+		return false, self:respond405()
+	elseif (res == 406) then
+		return false, self:respond406()
+	else
+		return self.handler.respond(self.handler, self)
+	end
+end
+
+function Httpd:continueResponse(conn)
+	print("continueResponse", self.status)
+
+	if (self.status == Httpd.STATUS_CONTINUE) then
+		local more, buf = self.handler.continue(self.handler, self)
+		
+		if (buf ~= nil) then
+			if (more) then
+				self.status = Httpd.STATUS_CONTINUE
+			else
+				self.status = Httpd.STATUS_END
+			end
+			conn:send(buf)
+			return
+		end
+	end
+
+	conn:close()
+	self.status = Httpd.STATUS_IDLE
+	collectgarbage()
+end
+
+function Httpd:parseRequest(request)
+	print("parseRequest", self.status)
+
+	self.headers = {}
+	local i = 0
+	for line in string.gmatch(request, "(.-)\n") do
+		if (i == 0) then
+			self.method, self.url, self.params = Httpd.parseMethod(line)
+			print("request:", self.method, self.url)
+		elseif (line == "") then
+			if (method == "POST" or method == "PUT") then
+				self.status = Httpd.STATUS_CONTINUE
+			else
+				self.status = Httpd.STATUS_IDLE
+			end
+			break
+		else
+			for k, v in Httpd.parseHeader(line) do
+				self.headers[k] = v
+			end
+		end
+		i = i + 1
+	end
+	self.status = Httpd.STATUS_IDLE
+end
+
+function Httpd.parseMethod(line)
+	local params = {}
+	local _, _, method, url, vars = string.find(line, "^([A-Z]+) /([^?]*)%??(.*) HTTP")
+	if (vars ~= nil) then
+		for k, v in string.gmatch(vars, "(%w+)=?(%w*)&*") do
+			params[k] = v
+		end
+	end
+	return method, url, params
+end
+
+function Httpd.parseHeader(line)
+	return string.gmatch(line, "([^:]+):%s*(.+)")
+end
+
+function Httpd:respond200(mime, size, more)
+	local buf = "HTTP/1.1 200 OK\n" .. self.version()
+	if (mime ~= nil) then
+		buf = buf .. "Content-Type: " .. mime .. "\n"
+	end
+	if (size > 0) then
+		buf = buf .. "Content-Length: " .. size .. "\n"
+	end
+	if (not more) then
+		buf = buf .. "\n"
+	end
 	return buf
 end
+
+function Httpd:respond404()
+	return "HTTP/1.1 404 Not found\n" .. self.version() .. "\n"
+end
+
+function Httpd:respond405()
+	return "HTTP/1.1 405 Method not allowed\n" .. self.version() .. "\n"
+end
+
+function Httpd:respond406()
+	return "HTTP/1.1 406 Not Acceptable\n" .. self.version() .. "\n"
+end
+
+function Httpd:respond500(err)
+	local buf = "HTTP/1.1 500 Error\n" .. self.version() .. "\n"
+	buf = buf .. err
+	return buf
+end
+
+return Httpd
