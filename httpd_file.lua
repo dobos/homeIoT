@@ -19,19 +19,7 @@ function Httpd_file:http_res_GET(httpd, continue)
 end
 
 function Httpd_file:http_req_POST(httpd, payload, continue)
-	local mode
-	if (not continue) then
-		self.file = string.sub(httpd.url, 6)
-		self.count = tonumber(httpd.headers["Content-Length"])
-		mode = "w+"
-	else
-		mode = "a+"
-	end
-	file.open(self.file, mode)
-	file.write(payload)
-	file.close()
-	self.count = self.count - string.len(payload)
-	return self.count > 0
+	return httpd:saveFile(self.file, payload, continue)
 end
 
 function Httpd_file:http_res_POST(httpd, continue)

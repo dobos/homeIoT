@@ -192,7 +192,7 @@ function Httpd:respond500(err)
 	return buf
 end
 
-function Httpd:serveFile(fn, mime, repl, continue)
+function Httpd:serveFile(fn, mime, replace, continue)
 	if (not continue) then
 		self.count = 0
 		-- test if file exists
@@ -203,6 +203,21 @@ function Httpd:serveFile(fn, mime, repl, continue)
 		more, self.count, buf = self:readFile(fn, self.count, 5, replace)
 		return more, buf
 	end
+end
+
+function Httpd:saveFile(fn, payload, continue)
+	local mode
+	if (not continue) then
+		self.count = tonumber(httpd.headers["Content-Length"])
+		mode = "w+"
+	else
+		mode = "a+"
+	end
+	file.open(fn, mode)
+	file.write(payload)
+	file.close()
+	self.count = self.count - string.len(payload)
+	return self.count > 0
 end
 
 function Httpd:readFile(fn, start, lines, replace)
