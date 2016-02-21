@@ -1,8 +1,9 @@
 local Dispd = {}
 Dispd.__index = Dispd
 
-function Dispd.new(scl, sda, dhtd)	
+function Dispd.new(scl, sda, msg, dhtd)	
 	local self = setmetatable({}, Dispd)
+	self.msg = msg
 	self.dhtd = dhtd
 	self.scl = scl
 	self.sda = sda
@@ -14,7 +15,6 @@ function Dispd.new(scl, sda, dhtd)
 	self.cool = false
 	self.fan = true
 	self.humi = true
-	self.messages = { "initializing..." }
 	return self
 end
 
@@ -34,26 +34,18 @@ function Dispd:getCallback()
 end
 
 function Dispd:render()
-	local big
-	
-	if (self.dhtd ~= nil) then
-		if (math.floor(self.counter / 5) % 2 == 0) then
-			big = self.dhtd.temperature
-		else
-			big = self.dhtd.humidity
-		end
-	end
-	
-	local msg = (self.messages[self.counter % #self.messages + 1])
+	local m = (self.msg.messages[self.counter % #self.msg.messages + 1])
 
 	self.disp:firstPage()
 	repeat
 		-- temp or humi
 		self.disp:setFont(u8g.font_fub30)
-		self.disp:drawStr(0, 32, big)
+		self.disp:drawStr(0, 32, string.format("%.1f°", self.dhtd.temperature))
 		self.disp:setFont(u8g.font_6x10)
-		if (msg ~= nil) then
-			self.disp:drawStr(0, 62, msg)
+		self.disp:drawStr(0, 48, string.format("%d%%", self.dhtd.humidity))
+		self.disp:setFont(u8g.font_6x10)
+		if (m ~= nil) then
+			self.disp:drawStr(0, 62, m)
 		end
 		self.disp:setFont(u8g.font_unifont_78_79)
 		if (self.cool) then
