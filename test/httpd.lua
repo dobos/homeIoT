@@ -99,10 +99,12 @@ do
 	local handler =
 	{
 		url = "test",
-		method = "GET",
 		mime = "text/plain",
 		idx = 0,
-		respond = function(self, httpd)
+		http_req_GET = function(self, httpd, payload, continue)
+			return false
+		end,
+		http_res_GET = function(self, httpd, continue)
 			return httpd:respond200(self.mime, 10, false)
 		end
 	}
@@ -165,20 +167,20 @@ end
 
 print()
 print()
-print("+++ Testing Httpd_getFile")
+print("+++ Testing Httpd_file")
 print()
 
 do
 	local h = createHttpd()
 
 	local getfilereq = 
-[[GET /files/test.lua HTTP/1.1
+[[GET /file/test.lua HTTP/1.1
 User-Agent: curl/7.40.0
 Accept: */*
 ]]
 
-	local http_getfile = require("httpd_getfile")
-	local gf = http_getfile.new()
+	local http_file = require("httpd_file")
+	local gf = http_file.new()
 	
 	h:addHandler(gf)
 	

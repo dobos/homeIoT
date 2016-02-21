@@ -1,8 +1,11 @@
 local Httpd = {}
 Httpd.__index = Httpd
 Httpd.STATUS_IDLE = 0
-Httpd.STATUS_CONTINUE = 1
-Httpd.STATUS_END = 2
+Httpd.STATUS_REQ = 1
+Httpd.STATUS_REQCNT = 2
+Httpd.STATUS_RES = 3
+Httpd.STATUS_RESCNT = 4
+Httpd.STATUS_END = 5
 
 function Httpd.new(w)
 	local self = setmetatable({}, Httpd)
@@ -14,10 +17,6 @@ end
 
 function Httpd:open(port)
 	self.status = Httpd.STATUS_IDLE
-	self.method = ""
-	self.url = ""
-	self.params = {}
-	self.headers = {}
 	self.srv = net.createServer(net.TCP)
 	self.srv:listen(port,
 		function(socket)
@@ -28,7 +27,7 @@ function Httpd:open(port)
 				end )
 			socket:on("sent",
 				function(conn)
-					self:continueResponse(conn)
+					self:processResponse(conn)
 				end )
 		end )
 	print(self.version())
@@ -42,29 +41,24 @@ function Httpd:addHandler(handler)
 	if (self.handlers[handler.url] == nil) then
 		self.handlers[handler.url] = {}
 	end
-	if (self.handlers[handler.url][handler.method] == nil) then
-		self.handlers[handler.url][handler.method] = {}
-	end
-	self.handlers[handler.url][handler.method][handler.idx] = handler
+	self.handlers[handler.url][handler.idx] = handler
 end
 
 function Httpd:getHandler()
 	for k, hi in pairs(self.handlers) do
 		if (string.sub(self.url, 1, string.len(k)) == k) then
-			if (hi[self.method] == nil) then
+			local handler = nil
+			for i, h in pairs(hi) do
+				if (self:isAccepted(h)) then
+					handler = h
+				end
+			end
+			if (handler == nil) then
+				return 406, nil
+			elseif (handler["http_res_" .. self.method] == nil) then
 				return 405, nil
 			else
-				local handler = nil
-				for i, h in pairs(hi[self.method]) do
-					if (self:isAccepted(h)) then
-						handler = h
-					end
-				end
-				if (handler == nil) then
-					return 406, nil
-				else
-					return 200, handler
-				end
+				return 200, handler
 			end
 		end
 	end
@@ -89,65 +83,7 @@ function Httpd:isAccepted(handler)
 	end
 end
 
-function Httpd:processRequest(conn, request)
-	print("processRequest", self.status)
-
-	if (self.status == Httpd.STATUS_IDLE) then
-		self:parseRequest(request)
-	elseif (self.status == Httpd.STATUS_CONTINUE) then
-		-- process request data
-	end
-		
-	local more, buf = self:createResponse()
-	if (more) then
-		self.status = Httpd.STATUS_CONTINUE
-	else
-		self.status = Httpd.STATUS_END
-	end
-	conn:send(buf)
-end
-
-function Httpd:createResponse()
-	print("createResponse", self.status)
-
-	local res
-	res, self.handler = self:getHandler()
-	if (res == 404) then
-		return false, self:respond404()
-	elseif (res == 405) then
-		return false, self:respond405()
-	elseif (res == 406) then
-		return false, self:respond406()
-	else
-		return self.handler.respond(self.handler, self)
-	end
-end
-
-function Httpd:continueResponse(conn)
-	print("continueResponse", self.status)
-
-	if (self.status == Httpd.STATUS_CONTINUE) then
-		local more, buf = self.handler.continue(self.handler, self)
-		
-		if (buf ~= nil) then
-			if (more) then
-				self.status = Httpd.STATUS_CONTINUE
-			else
-				self.status = Httpd.STATUS_END
-			end
-			conn:send(buf)
-			return
-		end
-	end
-
-	conn:close()
-	self.status = Httpd.STATUS_IDLE
-	collectgarbage()
-end
-
 function Httpd:parseRequest(request)
-	print("parseRequest", self.status)
-
 	self.headers = {}
 	local i = 0
 	for line in string.gmatch(request, "(.-)\n") do
@@ -169,6 +105,76 @@ function Httpd:parseRequest(request)
 		i = i + 1
 	end
 	self.status = Httpd.STATUS_IDLE
+end
+
+function Httpd:processRequest(conn, request)
+	local payload
+
+	if (self.status == Httpd.STATUS_IDLE) then
+		local res
+		self:parseRequest(request)
+		res, self.handler = self:getHandler()
+		print("handler", self.handler)
+		-- what if wrong handler
+		
+		local i, j = string.find(request, "\r\n\r\n")
+		if (i ~= nil and i > 0) then
+			payload = string.sub(request, j + 1)
+		else
+			payload = nil
+		end
+		print(payload)
+		
+		self.status = Httpd.STATUS_REQ
+	else
+		payload = request
+	end
+	
+	if (self.status == Httpd.STATUS_REQ or
+		self.status == Httpd.STATUS_REQCNT) then
+		local more = self.handler["http_req_" .. self.method](self.handler, self, payload, self.status == Httpd.STATUS_REQCNT)
+		if (more) then
+			self.status = Httpd.STATUS_REQCNT
+		else
+			self.status = Httpd.STATUS_RES
+			self:processResponse(conn)
+		end
+	end
+end
+
+function Httpd:processResponse(conn)
+	if (self.status == Httpd.STATUS_RES or
+		self.status == Httpd.STATUS_RESCNT) then
+		local more, buf = self.handler["http_res_" .. self.method](self.handler, self, self.status == Httpd.STATUS_RESCNT)
+		
+		if (buf ~= nil) then
+			if (more) then
+				self.status = Httpd.STATUS_RESCNT
+			else
+				self.status = Httpd.STATUS_END
+			end
+			conn:send(buf)
+			return
+		end
+	end
+
+	conn:close()
+	self.status = Httpd.STATUS_IDLE
+	collectgarbage()
+end
+
+function Httpd:createResponse()
+	local res
+	res, self.handler = self:getHandler()
+	if (res == 404) then
+		return false, self:respond404()
+	elseif (res == 405) then
+		return false, self:respond405()
+	elseif (res == 406) then
+		return false, self:respond406()
+	else
+		return self.handler["http_res_" .. self.method](self.handler, self, false)
+	end
 end
 
 function Httpd.parseMethod(line)

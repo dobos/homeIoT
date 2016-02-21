@@ -1,20 +1,30 @@
-dhtd = {}
-dhtd.tmr = 2
-dhtd.gpio = 2
-dhtd.interval = 5000
-dhtd.counter = 0
-dhtd.temperature = 0.0
-dhtd.humidity = 0.0
+local Dhtd = {}
+Dhtd.__index = Dhtd
 
-function dhtd.start()
-	tmr.alarm(dhtd.tmr, dhtd.interval, 1, dhtd.on_event)
+function Dhtd.new(p)
+	local self = setmetatable({}, Dhtd)
+	self.tmr = p
+	self.gpio = p
+	self.interval = 5000
+	self.counter = 0
+	self.temperature = 0.0
+	self.humidity = 0.0
+	
+	self.url = "dht"
+	self.method = "GET"
+	self
+	
+	return self
 end
 
-function dhtd.on_event()
-	_, dhtd.temperature, dhtd.humidity = dht.read(dhtd.gpio)
+function Dhtd:start()
+	tmr.alarm(self.tmr, self.interval, 1, 
+		function(self) 
+			_, self.temperature, self.humidity = dht.read(self.gpio)
 	
-	if (dispd ~= nil) then
-		dispd.setTemperature(dhtd.temperature)
-		dispd.setHumidity(dhtd.humidity)
-	end
+			if (self.dispd ~= nil) then
+				self.dispd:setTemperature(self.temperature)
+				self.dispd:setHumidity(self.humidity)
+			end		
+		end)
 end
