@@ -11,8 +11,6 @@ function Dhtd.new(p)
 	self.humidity = 0.0
 	
 	self.url = "dht"
-	self.method = "GET"
-	self
 	
 	return self
 end
@@ -28,3 +26,5 @@ function Dhtd:start()
 			end		
 		end)
 end
+
+return Dhtd
