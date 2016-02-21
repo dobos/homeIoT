@@ -54,25 +54,6 @@ end
 
 print()
 print()
-print("+++ Testing parseHeader")
-print()
-
-do
-	local h = createHttpd()
-
-	for k, v in h.parseHeader("Accept: */*") do
-		assert(k == "Accept")
-		assert(v == "*/*")
-	end
-	
-	for k, v in h.parseHeader("User-Agent: curl/7.40.0") do
-		assert(k == "User-Agent")
-		assert(v == "curl/7.40.0")
-	end
-end
-
-print()
-print()
 print("+++ Testing parseRequest")
 print()
 
@@ -114,7 +95,7 @@ do
 	h:addHandler(handler)
 
 	h:parseRequest(getreq)
-	local res, v = h:getHandler()
+	local res, v = h:getHandler(h.url)
 	assert(v.mime == "text/plain")
 end
 
@@ -146,31 +127,10 @@ Accept: text/plain
 	h:addHandler(handler)
 
 	h:parseRequest(getreq)
-	local res, v = h:getHandler()
+	local res, v = h:getHandler(h.url)
 	assert(v == nil)
 end
 
-
-
-print()
-print()
-print("+++ Testing createResponse")
-print()
-
-do
-	local h = createHttpd()
-	local buf
-	
-	h:parseRequest(getreq)
-	more, buf = h:createResponse()
-
-	assert(not more)
-	assert(buf == 
-[[HTTP/1.1 404 Not found
-Server: httpd - nodeMCU on ESP8266
-
-]])
-end
 
 print()
 print()
@@ -192,14 +152,5 @@ Accept: */*
 	h:addHandler(gf)
 	
 	h:parseRequest(getfilereq)
-	more, buf = h:createResponse()
-	
-	assert(more)
-	assert(buf ==
-[[HTTP/1.1 200 OK
-Server: httpd - nodeMCU on ESP8266
-Content-Type: text/plain
 
-
-]])
 end

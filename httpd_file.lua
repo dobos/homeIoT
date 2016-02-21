@@ -5,27 +5,17 @@ function Httpd_file.new()
 	local self = setmetatable({}, Httpd_file)
 	self.url = "file"
 	self.mime = "text/plain"
-	self.file = ""
-	self.count = 0
+	self.file = nil
 	return self
 end
 
 function Httpd_file:http_req_GET(httpd, payload, continue)
+	self.file = string.sub(httpd.url, 6)
 	return false
 end
 
 function Httpd_file:http_res_GET(httpd, continue)
-	if (not continue) then
-		self.file = string.sub(httpd.url, 6)
-		self.count = 0
-		-- test if file exists
-		local buf = httpd:respond200(self.mime, -1, false)
-		return true, buf .. "\n"
-	else
-		local more, buf
-		more, self.count, buf = httpd:serveFile(self.file, self.count, 5, nil)
-		return more, buf
-	end
+	return httpd:serveFile(self.file, self.mime, nil, continue)
 end
 
 function Httpd_file:http_req_POST(httpd, payload, continue)
