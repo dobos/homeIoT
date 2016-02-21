@@ -2,24 +2,18 @@ GPIO map
 ========
 
 
-LUA  ESP  comments
+LUA  ESP  comments  use
 
-0    16
-1    05
-2    04
-3    00   FLASH
-4    02   TX
-5    14
-6    12
-7    13   RX
-8    15
+0    16             relay
+1    05             
+2    04             DHT
+3    00   FLASH     
+4    02   TX	    
+5    14		    relay
+6    12		    SDA/relay
+7    13   RX        SCL/relay
+8    15             LED
 9    RX   RX0
 10   TX   TX0
 11   ??
 12   ??
-
-
-
-
-sethostname csak dev buildben létezik
-wifi.sta.config-nál auto = 0 kell, különben megjegyzi az utolsót és önállóvá válik

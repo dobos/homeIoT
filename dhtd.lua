@@ -16,15 +16,13 @@ function Dhtd.new(p)
 end
 
 function Dhtd:start()
-	tmr.alarm(self.tmr, self.interval, 1, 
-		function(self) 
-			_, self.temperature, self.humidity = dht.read(self.gpio)
-	
-			if (self.dispd ~= nil) then
-				self.dispd:setTemperature(self.temperature)
-				self.dispd:setHumidity(self.humidity)
-			end		
-		end)
+	tmr.alarm(self.tmr, self.interval, 1, self:getCallback())
+end
+
+function Dhtd:getCallback()
+	return function()
+		_, self.temperature, self.humidity = dht.read(self.gpio)
+	end
 end
 
 return Dhtd

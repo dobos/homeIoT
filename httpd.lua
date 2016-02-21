@@ -38,39 +38,32 @@ function Httpd:version()
 end
 
 function Httpd:addHandler(handler)
-	if (self.handlers[handler.url] == nil) then
-		self.handlers[handler.url] = {}
-	end
-	self.handlers[handler.url][handler.idx] = handler
+	self.handlers[handler.url] = handler
 end
 
 function Httpd:getHandler()
-	for k, hi in pairs(self.handlers) do
+	local handler = nil
+	for k, h in pairs(self.handlers) do
 		if (string.sub(self.url, 1, string.len(k)) == k) then
-			local handler = nil
-			for i, h in pairs(hi) do
-				if (self:isAccepted(h)) then
-					handler = h
-				end
-			end
-			if (handler == nil) then
-				return 406, nil
-			elseif (handler["http_res_" .. self.method] == nil) then
-				return 405, nil
-			else
-				return 200, handler
-			end
+			handler = h
+			break
 		end
 	end
-
-	return 404, nil
+			
+	if (handler == nil) then
+		return 404, nil
+	elseif (handler["http_res_" .. self.method] == nil) then
+		return 405, nil
+	else
+		return 200, handler
+	end
 end
 
-function Httpd:isAccepted(handler)
-	local a,b = string.match(handler.mime, "(%w+)/(%w+)")
+function Httpd:isAccepted(mime)
+	local a,b = string.match(mime, "(%w+)/(%w+)")
 	if (self.headers.Accept == nil) then
 		return true
-	elseif (string.find(self.headers.Accept, handler.mime) ~= nil) then
+	elseif (string.find(self.headers.Accept, mime) ~= nil) then
 		return true
 	elseif (string.find(self.headers.Accept, a.."/%*")) then
 		return true
@@ -89,7 +82,6 @@ function Httpd:parseRequest(request)
 	for line in string.gmatch(request, "(.-)\n") do
 		if (i == 0) then
 			self.method, self.url, self.params = Httpd.parseMethod(line)
-			print("request:", self.method, self.url)
 		elseif (line == "") then
 			if (method == "POST" or method == "PUT") then
 				self.status = Httpd.STATUS_CONTINUE
@@ -107,14 +99,13 @@ function Httpd:parseRequest(request)
 	self.status = Httpd.STATUS_IDLE
 end
 
-function Httpd:processRequest(conn, request)
+function Httpd:processRequest(conn, request)	
 	local payload
 
 	if (self.status == Httpd.STATUS_IDLE) then
 		local res
 		self:parseRequest(request)
 		res, self.handler = self:getHandler()
-		print("handler", self.handler)
 		-- what if wrong handler
 		
 		local i, j = string.find(request, "\r\n\r\n")
@@ -123,7 +114,6 @@ function Httpd:processRequest(conn, request)
 		else
 			payload = nil
 		end
-		print(payload)
 		
 		self.status = Httpd.STATUS_REQ
 	else
@@ -157,7 +147,6 @@ function Httpd:processResponse(conn)
 			return
 		end
 	end
-
 	conn:close()
 	self.status = Httpd.STATUS_IDLE
 	collectgarbage()
@@ -222,6 +211,33 @@ function Httpd:respond500(err)
 	local buf = "HTTP/1.1 500 Error\n" .. self.version() .. "\n"
 	buf = buf .. err
 	return buf
+end
+
+function Httpd:serveFile(fn, start, lines, replace)
+	local buf = ""
+	local res = -1
+	if file.open(fn, "r") then
+		file.seek("set", start)
+		
+		while lines > 0 do
+			local line = file.readline()
+			if (line == nil) then
+				break
+			else
+				buf = buf .. line
+			end
+			lines = lines - 1
+		end
+		
+		res = file.seek()
+		file.close()
+	end
+	
+	if buf == "" then
+		return false, -1, nil
+	else
+		return true, res, buf
+	end	
 end
 
 return Httpd

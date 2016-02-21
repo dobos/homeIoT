@@ -9,6 +9,7 @@ file.open = function(a, b) return true end
 file.seek = function(a, b) end
 file.read = function(n) return "aaa" end
 file.close = function() end
+trace = function(msg) print(msg) end
 
 function createHttpd()
 	local httpd = require("httpd")
@@ -42,12 +43,13 @@ do
 	local h = createHttpd()
 	local method, url, params = h.parseMethod(postreq)
 
-	print("method: " .. method)
-	print("url: " .. url)
-	print("params: ")
-	for k,v in pairs(params) do
-		print ("        " .. k .. ": " .. v)
-	end
+	assert(method == "POST")
+	assert(url == "srv2.lua")
+	assert(params["edit"] ~= nil)
+	assert(params["test"] == "yes")
+	--for k,v in pairs(params) do
+	--	print ("        " .. k .. ": " .. v)
+	--end
 end
 
 print()
@@ -59,11 +61,13 @@ do
 	local h = createHttpd()
 
 	for k, v in h.parseHeader("Accept: */*") do
-		print(k .. ": " .. v)
+		assert(k == "Accept")
+		assert(v == "*/*")
 	end
 	
 	for k, v in h.parseHeader("User-Agent: curl/7.40.0") do
-		print(k .. ": " .. v)
+		assert(k == "User-Agent")
+		assert(v == "curl/7.40.0")
 	end
 end
 
@@ -76,16 +80,14 @@ do
 	local h = createHttpd()
 	h:parseRequest(postreq)
 	
-	print("method: " .. h.method)
-	print("url: " .. h.url)
-	print("params: ")
-	for k,v in pairs(h.params) do
-		print ("        " .. k .. ": " .. v)
-	end
-	print("headers: ")
-	for k, v in pairs(h.headers) do
-		print("        " .. k .. ": " .. v)
-	end
+	assert(h.method == "POST")
+	assert(h.url == "srv2.lua")
+	assert(h.params["edit"] ~= nil)
+	assert(h.params["test"] == "yes")
+	assert(h.headers["User-Agent"] == "curl/7.40.0")
+	assert(h.headers["Host"] == "192.168.0.81")
+	assert(h.headers["Accept"] == "*/*")
+	assert(h.headers["Content-Length"] == "-1")
 end
 
 print()
@@ -113,7 +115,7 @@ do
 
 	h:parseRequest(getreq)
 	local res, v = h:getHandler()
-	print(v.mime)
+	assert(v.mime == "text/plain")
 end
 
 print()
@@ -145,7 +147,7 @@ Accept: text/plain
 
 	h:parseRequest(getreq)
 	local res, v = h:getHandler()
-	print(v == nil)
+	assert(v == nil)
 end
 
 
@@ -162,7 +164,12 @@ do
 	h:parseRequest(getreq)
 	more, buf = h:createResponse()
 
-	print(buf)
+	assert(not more)
+	assert(buf == 
+[[HTTP/1.1 404 Not found
+Server: httpd - nodeMCU on ESP8266
+
+]])
 end
 
 print()
@@ -186,42 +193,13 @@ Accept: */*
 	
 	h:parseRequest(getfilereq)
 	more, buf = h:createResponse()
+	
+	assert(more)
+	assert(buf ==
+[[HTTP/1.1 200 OK
+Server: httpd - nodeMCU on ESP8266
+Content-Type: text/plain
 
-	print(buf)
+
+]])
 end
-
---[[h:addhandler("GET", "/", "text/plain", function(params, headers)
-	return 200, "text/html", "hello"
-end)
-
-h:addhandler("GET", "/", "text/json", function(params, headers)
-	return 200, "text/json", "{ \"hello\":\"world\" }"
-end)
-
-method = "GET"
-path = "/"
-params = {}
-headers = {}
-
-headers.Accept = "text/plain"
-buf = h:buildresponse("GET", "/", params, headers)
-print(buf)
-
-headers.Accept = "text/json"
-buf = h:buildresponse("GET", "/", params, headers)
-print(buf)
-
-headers.Accept = "text/*"
-buf = h:buildresponse("GET", "/", params, headers)
-print(buf)
-
-headers.Accept = "*/*"
-buf = h:buildresponse("GET", "/", params, headers)
-print(buf)
-
-headers.Accept = "text/xml"
-buf = h:buildresponse("GET", "/", params, headers)
-print(buf)
-
-h:open()
-]]
