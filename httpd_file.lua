@@ -9,8 +9,12 @@ function Httpd_file.new()
 	return self
 end
 
-function Httpd_file:http_req_GET(httpd, payload, continue)
+function Httpd_file:parseUrl(httpd)
 	self.file = string.sub(httpd.url, 6)
+end
+
+function Httpd_file:http_req_GET(httpd, payload, continue)
+	self:parseUrl(httpd)
 	return false
 end
 
@@ -19,6 +23,7 @@ function Httpd_file:http_res_GET(httpd, continue)
 end
 
 function Httpd_file:http_req_POST(httpd, payload, continue)
+	self:parseUrl(httpd)
 	return httpd:saveFile(self.file, payload, continue)
 end
 

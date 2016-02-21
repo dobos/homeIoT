@@ -10,7 +10,7 @@ Httpd.STATUS_END = 5
 function Httpd.new(w)
 	local self = setmetatable({}, Httpd)
 	self.wifid = w
-	self.version = "Server: httpd - nodeMCU on ESP8266\n"
+	self.version = "Server: httpd - nodeMCU on ESP8266\r\n"
 	self.srv = nil
 	self.handlers = {}
 	self.count = 0
@@ -72,6 +72,15 @@ function Httpd:isAccepted(mime)
 	else
 		return false
 	end
+end
+
+function Httpd:getAccepted(mimes, files, default)
+	for i, v in ipairs(mimes) do
+		if self:isAccepted(v) then
+			return v, files[i]
+		end
+	end
+	return (mimes[default]), (files[default])
 end
 
 function Httpd:parseRequest(request)
@@ -161,33 +170,33 @@ function Httpd.parseMethod(line)
 end
 
 function Httpd:respond200(mime, size, more)
-	local buf = "HTTP/1.1 200 OK\n" .. self.version
+	local buf = "HTTP/1.1 200 OK\r\n" .. self.version
 	if (mime ~= nil) then
-		buf = buf .. "Content-Type: " .. mime .. "\n"
+		buf = buf .. "Content-Type: " .. mime .. "\r\n"
 	end
 	if (size > 0) then
-		buf = buf .. "Content-Length: " .. size .. "\n"
+		buf = buf .. "Content-Length: " .. size .. "\r\n"
 	end
 	if (not more) then
-		buf = buf .. "\n"
+		buf = buf .. "\r\n"
 	end
 	return buf
 end
 
 function Httpd:respond404()
-	return "HTTP/1.1 404 Not found\n" .. self.version .. "\n"
+	return "HTTP/1.1 404 Not found\r\n" .. self.version .. "\r\n"
 end
 
 function Httpd:respond405()
-	return "HTTP/1.1 405 Method not allowed\n" .. self.version .. "\n"
+	return "HTTP/1.1 405 Method not allowed\r\n" .. self.version .. "\r\n"
 end
 
 function Httpd:respond406()
-	return "HTTP/1.1 406 Not Acceptable\n" .. self.version .. "\n"
+	return "HTTP/1.1 406 Not Acceptable\r\n" .. self.version .. "\r\n"
 end
 
 function Httpd:respond500(err)
-	local buf = "HTTP/1.1 500 Error\n" .. self.version .. "\n"
+	local buf = "HTTP/1.1 500 Error\r\n" .. self.version .. "\r\n"
 	buf = buf .. err
 	return buf
 end
@@ -196,7 +205,7 @@ function Httpd:serveFile(fn, mime, replace, continue)
 	if (not continue) then
 		self.count = 0
 		-- test if file exists
-		local buf = self:respond200(mime, -1, true)
+		local buf = self:respond200(mime, -1, false)
 		return true, buf
 	else
 		local more, buf
@@ -208,7 +217,7 @@ end
 function Httpd:saveFile(fn, payload, continue)
 	local mode
 	if (not continue) then
-		self.count = tonumber(httpd.headers["Content-Length"])
+		self.count = tonumber(self.headers["Content-Length"])
 		mode = "w+"
 	else
 		mode = "a+"
@@ -230,6 +239,11 @@ function Httpd:readFile(fn, start, lines, replace)
 			if (line == nil) then
 				break
 			else
+				if replace ~= nil then
+					for k, v in pairs(replace) do
+						line = string.gsub(line, k, v)
+					end
+				end
 				buf = buf .. line
 			end
 			lines = lines - 1

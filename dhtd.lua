@@ -1,17 +1,26 @@
 local Dhtd = {}
 Dhtd.__index = Dhtd
+Dhtd.MIMES =
+{
+	"text/html",
+	"text/xml",
+	"application/json",
+	"text/plain"
+}
+Dhtd.FILES =
+{
+	"dht.html",
+	"dht.xml",
+	"dht.json",
+	"dht.txt"
+}
 
 function Dhtd.new(p)
 	local self = setmetatable({}, Dhtd)
 	self.gpio = p
 	self.temperature = 0.0
 	self.humidity = 0.0
-	
 	self.url = "dht"
-	self.mime = "text/plain"
-	self.file = "dht.json"
-	self.count = 0
-	
 	return self
 end
 
@@ -26,6 +35,7 @@ function Dhtd:getCallback()
 end
 
 function Dhtd:http_req_GET(httpd, payload, continue)
+	self.mime, self.file = httpd:getAccepted(Dhtd.MIMES, Dhtd.FILES, #Dhtd.MIMES)
 	return false
 end
 
