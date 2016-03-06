@@ -39,9 +39,9 @@ function Dispd:render()
 	self.disp:firstPage()
 	repeat
 		-- temp or humi
-		self.disp:setFont(u8g.font_fub30)
-		self.disp:drawStr(0, 32, string.format("%.1f°", self.dhtd.temperature))
-		self.disp:setFont(u8g.font_6x10)
+		self.disp:setFont(u8g.font_helvB24)
+		self.disp:drawStr(0, 28, string.format("%.1f°", self.dhtd.temperature))
+		self.disp:setFont(u8g.font_helvB12)
 		self.disp:drawStr(0, 48, string.format("%d%%", self.dhtd.humidity))
 		self.disp:setFont(u8g.font_6x10)
 		if (m ~= nil) then

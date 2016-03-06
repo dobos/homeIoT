@@ -11,7 +11,7 @@ Dhtd.FILES =
 {
 	"dht.html",
 	"dht.xml",
-	"dht.json",
+	nil,
 	"dht.txt"
 }
 
@@ -34,16 +34,31 @@ function Dhtd:getCallback()
 	end
 end
 
+function Dhtd:getJSON()
+	return cjson.encode({
+		temp = self.temperature,
+		humi = self.humidity
+	})
+end
+
 function Dhtd:http_req_GET(httpd, payload, continue)
 	self.mime, self.file = httpd:getAccepted(Dhtd.MIMES, Dhtd.FILES, #Dhtd.MIMES)
 	return false
 end
 
 function Dhtd:http_res_GET(httpd, continue)
-	local repl = { 
-		__t__ = self.temperature,
-		__h__ = self.humidity }
-	return httpd:serveFile(self.file, self.mime, repl, continue)
+	if (self.mime == "application/json") then
+		if (continue) then
+			return false, self:getJSON()
+		else
+			return true, httpd:respond200(self.mime, -1, false)
+		end
+	else
+		local repl = { 
+			__t__ = self.temperature,
+			__h__ = self.humidity }
+		return httpd:serveFile(self.file, self.mime, repl, continue)
+	end
 end
 
 return Dhtd

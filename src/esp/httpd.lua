@@ -77,7 +77,7 @@ end
 function Httpd:getAccepted(mimes, files, default)
 	for i, v in ipairs(mimes) do
 		if self:isAccepted(v) then
-			return v, files[i]
+			return v, (files[i])
 		end
 	end
 	return (mimes[default]), (files[default])

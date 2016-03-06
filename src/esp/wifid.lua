@@ -7,11 +7,7 @@ function Wifid.new(msg, ssid, pass)
 	self.SSID = ssid
 	self.password = pass
 	self.apcounter = 0
-	self.hostname = "nodeMCU"
-	self.ip = "192.168.0.81"
-	self.netmask = "255.255.255.0"
-	self.gateway = "192.168.0.1"
-	self.server = "192.168.0.2"
+	self.hostname = "esp-" .. node.chipid()
 	self.gpio = 8
 	self.tmr = 0
 	self.interval = 200
