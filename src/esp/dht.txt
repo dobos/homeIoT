@@ -1,2 +1,3 @@
+id: __id__
 temperature: __t__ C
 relative humidity: __h__ %

@@ -241,7 +241,7 @@ function Httpd:readFile(fn, start, lines, replace)
 			else
 				if replace ~= nil then
 					for k, v in pairs(replace) do
-						line = string.gsub(line, k, v)
+						line = string.gsub(line, "__" .. k .. "__", v)
 					end
 				end
 				buf = buf .. line

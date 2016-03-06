@@ -15,9 +15,9 @@ Dhtd.FILES =
 	"dht.txt"
 }
 
-function Dhtd.new(p)
+function Dhtd.new(port)
 	local self = setmetatable({}, Dhtd)
-	self.gpio = p
+	self.gpio = port
 	self.temperature = 0.0
 	self.humidity = 0.0
 	self.url = "dht"
@@ -25,20 +25,22 @@ function Dhtd.new(p)
 end
 
 function Dhtd:start()
-	tmr.alarm(self.gpio, 5000, 1, self:getCallback())
 end
 
-function Dhtd:getCallback()
-	return function()
-		_, self.temperature, self.humidity = dht.read(self.gpio)
-	end
+function Dhtd:update()
+	_, self.temperature, self.humidity = dht.read(self.gpio)
+end
+
+function Dhtd:getPayload()
+	return {
+		id = node.chipid(),
+		temp = self.temperature,
+		humi = self.humidity
+	}
 end
 
 function Dhtd:getJSON()
-	return cjson.encode({
-		temp = self.temperature,
-		humi = self.humidity
-	})
+	return cjson.encode(self:getPayload())
 end
 
 function Dhtd:http_req_GET(httpd, payload, continue)
@@ -54,10 +56,7 @@ function Dhtd:http_res_GET(httpd, continue)
 			return true, httpd:respond200(self.mime, -1, false)
 		end
 	else
-		local repl = { 
-			__t__ = self.temperature,
-			__h__ = self.humidity }
-		return httpd:serveFile(self.file, self.mime, repl, continue)
+		return httpd:serveFile(self.file, self.mime, self:getPayload(), continue)
 	end
 end
 
