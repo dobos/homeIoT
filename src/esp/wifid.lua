@@ -59,17 +59,20 @@ function Wifid:event()
 	elseif (sta == wifi.STA_CONNECTING) then
 		led = math.floor(self.counter / 3) % 2
 		self.gotip = false
-		self.msg.messages = { "wifi connecting to", ssid }
+		if (self.counter % 5 == 0) then
+			self.msg:enqueue("wifi connecting to", 1)
+			self.msg:enqueue(ssid, 1)
+		end
 	elseif (sta == wifi.STA_WRONGPWD or sta == wifi.STA_APNOTFOUND or sta == wifi.STA_FAIL) then
 		led = self.counter % 2
 		self.gotip = false
 		
 		if (sta == wifi.STA_WRONGPWD) then
-			self.msg.messages = { "wrong password" }
+			self.msg:enqueue("wrong wifi password", 1)
 		elseif (sta == wifi.STA_APNOTFOUND) then
-			self.msg.messages = { "wifi AP not found" }
+			self.msg:enqueue("wifi AP not found", 1)
 		elseif (sta == wifi.STA_FAIL) then
-			self.msg.messages = { "wifi failed" }
+			self.msg:enqueue("wifi connection failed", 1)
 		end
 		
 		wifi.sta.disconnect()
@@ -77,7 +80,8 @@ function Wifid:event()
 		ip, _, _ = wifi.sta.getip()
 		led = 1
 		if (self.gotip == false) then
-			self.msg.messages = { "wifi connected" , ssid }
+			self.msg:enqueue("wifi connected to", 3)
+			self.msg:enqueue(ssid, 3)
 			self.gotip = true
 		end
 	end

@@ -34,7 +34,7 @@ function Dispd:getCallback()
 end
 
 function Dispd:render()
-	local m = (self.msg.messages[self.counter % #self.msg.messages + 1])
+	local m = self.msg:dequeue()
 
 	self.disp:firstPage()
 	repeat
