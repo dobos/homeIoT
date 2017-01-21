@@ -55,6 +55,7 @@ function Wifid:event()
 	local led = 0
 		
 	if (sta == wifi.STA_IDLE) then
+		-- reconnect
 		led = 0
 	elseif (sta == wifi.STA_CONNECTING) then
 		led = math.floor(self.counter / 3) % 2

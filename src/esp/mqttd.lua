@@ -1,8 +1,9 @@
 local Mqttd = {}
 Mqttd.__index = Mqttd
 
-function Mqttd.new(server)
+function Mqttd.new(msg, server)
 	local self = setmetatable({}, Mqttd)
+	self.msg = msg
 	self.online = false
 	self.server = server
 	self.tmr = 3
@@ -18,7 +19,7 @@ function Mqttd:start()
 	self.client = mqtt.Client("esp-" .. node.chipid(), 120, self.user, self.pass)
 	
 	self.client:on("connect", function()
-		print("connected")
+		self.msg:enqueue("mqtt connected", 3)
 		tmr.unregister(self.tmr)
 		online = true
 	end)
@@ -28,7 +29,6 @@ function Mqttd:start()
 	end)
 	
 	self.client:on("offline", function()
-		print("offline, trying to reconnect")
 		online = false
 		self:connect()
 	end)
@@ -42,7 +42,7 @@ end
 
 function Mqttd:getCallback()
 	return function()
-		print("connecting")
+		self.msg:enqueue("mqtt connecting", 3)
 		self.client:connect(self.server, self.port)
 	end
 end
