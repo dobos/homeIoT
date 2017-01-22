@@ -1,0 +1,7 @@
+built with https://nodemcu-build.com/index.php
+
+modules: cjson,dht,file,gpio,i2c,mqtt,net,node,tmr,u8g,uart,wifi
+
+display: ssd1306_128x64_i2c
+
+fonts: font_6x10,font_helvB12,font_helvB24
