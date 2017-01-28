@@ -1,4 +1,4 @@
-local Httpd = {}
+Httpd = {}
 Httpd.__index = Httpd
 Httpd.STATUS_IDLE = 0
 Httpd.STATUS_REQ = 1
@@ -23,7 +23,6 @@ function Httpd:open(port)
 	self.srv:listen(port,
 		function(socket)
 			socket:on("receive",
-				--wifid.flashLed(0)
 				function(conn, request)
 					self:processRequest(conn, request)
 				end )
@@ -102,12 +101,20 @@ function Httpd:parseRequest(request)
 end
 
 function Httpd:processRequest(conn, request)	
+	wifid:flashLed(gpio.LOW)
+	
 	local payload
 
 	if (self.status == Httpd.STATUS_IDLE) then
 		local res
 		self:parseRequest(request)
 		res, self.handler = self:getHandler(self.url)
+		
+		if (self.handler == nil) then
+			conn:send(self.respond500("No handler"))
+			conn:close()
+			return
+		end
 		
 		local i, j = string.find(request, "\r\n\r\n")
 		if (i ~= nil and i > 0) then
@@ -123,7 +130,8 @@ function Httpd:processRequest(conn, request)
 	
 	if (self.status == Httpd.STATUS_REQ or
 		self.status == Httpd.STATUS_REQCNT) then
-		local more = self.handler["http_req_" .. self.method](self.handler, self, payload, self.status == Httpd.STATUS_REQCNT)
+		local method = (self.handler["http_req_" .. self.method])
+		local more = method(self.handler, self, payload, self.status == Httpd.STATUS_REQCNT)
 		if (more) then
 			self.status = Httpd.STATUS_REQCNT
 		else
@@ -136,7 +144,8 @@ end
 function Httpd:processResponse(conn)
 	if (self.status == Httpd.STATUS_RES or
 		self.status == Httpd.STATUS_RESCNT) then
-		local more, buf = self.handler["http_res_" .. self.method](self.handler, self, self.status == Httpd.STATUS_RESCNT)
+		local handler = (self.handler["http_res_" .. self.method])
+		local more, buf = handler(self.handler, self, self.status == Httpd.STATUS_RESCNT)
 		
 		if (buf ~= nil) then
 			if (more) then
@@ -257,5 +266,3 @@ function Httpd:readFile(fn, start, lines, replace)
 		return true, res, buf
 	end	
 end
-
-return Httpd

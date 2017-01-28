@@ -1,4 +1,4 @@
-local Msgd = {}
+Msgd = {}
 Msgd.__index = Msgd
 
 function Msgd.new()
@@ -37,5 +37,3 @@ function Msgd:dequeue()
 	
 	return msg
 end
-
-return Msgd

@@ -1,4 +1,4 @@
-local Httpd_file = {}
+Httpd_file = {}
 Httpd_file.__index = Httpd_file
 
 function Httpd_file.new()
@@ -30,5 +30,3 @@ end
 function Httpd_file:http_res_POST(httpd, continue)
 	return false, httpd:respond200(self.mime, -1, false)
 end
-
-return Httpd_file

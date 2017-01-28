@@ -1,4 +1,4 @@
-local Wifid = {}
+Wifid = {}
 Wifid.__index = Wifid
 
 function Wifid.new(msg, ssid, pass)
@@ -99,5 +99,3 @@ end
 function Wifid:flashLed(led)
 	gpio.write(self.gpio, led)
 end
-
-return Wifid
