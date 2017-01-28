@@ -17,3 +17,16 @@ LUA  ESP  comments  use
 10   TX   TX0
 11   ??
 12   ??
+
+
+Termosztátok
+
+     FW
+
+1:   OK
+2:   OK
+3:   OK
+
+
+
+
