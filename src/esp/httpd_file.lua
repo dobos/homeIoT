@@ -19,7 +19,20 @@ function Httpd_file:http_req_GET(httpd, payload, continue)
 end
 
 function Httpd_file:http_res_GET(httpd, continue)
+	print("HTTP GET" .. self.file)
 	return httpd:serveFile(self.file, self.mime, nil, continue)
+end
+
+function Httpd_file:http_req_DELETE(httpd, payload, continue)
+	self:parseUrl(httpd)
+	return false
+end
+
+function Httpd_file:http_res_DELETE(httpd, payload, continue)
+	print("HTTP DELETE " .. self.file)
+	file.remove(self.file)
+	local buf = httpd:respond200(mime, -1, false)
+	return false, buf
 end
 
 function Httpd_file:http_req_POST(httpd, payload, continue)

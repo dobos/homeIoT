@@ -111,7 +111,7 @@ function Httpd:processRequest(conn, request)
 		res, self.handler = self:getHandler(self.url)
 		
 		if (self.handler == nil) then
-			conn:send(self.respond500("No handler"))
+			conn:send(self:respond500("No handler"))
 			conn:close()
 			return
 		end
